@@ -424,7 +424,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             node = ring.node(node.clientRouterNodeId());
 
-            if (!nodeAlive(node.id()))
+            if (node == null || !nodeAlive(node.id()))
                 return false;
         }
 
@@ -550,6 +550,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                             if (log.isDebugEnabled())
                                 log.debug("Failed to ping the node (has left or leaving topology): [nodeId=" + nodeId +
                                     ']');
+
+                            fut.onDone((IgniteBiTuple<UUID, Boolean>)null);
 
                             return null;
                         }
