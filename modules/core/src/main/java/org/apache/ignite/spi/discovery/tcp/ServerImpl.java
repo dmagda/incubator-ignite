@@ -386,10 +386,13 @@ class ServerImpl extends TcpDiscoveryImpl {
         if (nodeId == getLocalNodeId())
             return true;
 
-        if (!nodeAlive(nodeId))
+        TcpDiscoveryNode node = ring.node(nodeId);
+
+        if (node == null)
             return false;
 
-        TcpDiscoveryNode node = ring.node(nodeId);
+        if (!nodeAlive(nodeId))
+            return false;
 
         boolean res = pingNode(node);
 
@@ -430,20 +433,16 @@ class ServerImpl extends TcpDiscoveryImpl {
                 // ID returned by the node should be the same as ID of the parameter for ping to succeed.
                 IgniteBiTuple<UUID, Boolean> t = pingNode(addr, node.id(), clientNodeId);
 
+                if (t == null)
+                    // Remote node left topology.
+                    return false;
+
                 boolean res = node.id().equals(t.get1()) && (clientNodeId == null || t.get2());
 
                 if (res)
                     node.lastSuccessfulAddress(addr);
 
                 return res;
-            }
-            catch (IgniteNodeLeftException e) {
-                if (log.isDebugEnabled())
-                    log.debug("Failed to ping node [node=" + node + ", err=" + e.getMessage() + ']');
-
-                onException("Failed to ping node [node=" + node + ", err=" + e.getMessage() + ']', e);
-
-                return false;
             }
             catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
@@ -463,10 +462,11 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param addr Address of the node.
      * @param nodeId Node ID to ping. In case when client node ID is not null this node ID is an ID of the router node.
      * @param clientNodeId Client node ID.
-     * @return ID of the remote node and "client exists" flag if node alive.
+     * @return ID of the remote node and "client exists" flag if node alive or {@code null} if the remote node has
+     *         left a topology during the ping process.
      * @throws IgniteCheckedException If an error occurs.
      */
-    private IgniteBiTuple<UUID, Boolean> pingNode(InetSocketAddress addr, @Nullable UUID nodeId,
+    private @Nullable IgniteBiTuple<UUID, Boolean> pingNode(InetSocketAddress addr, @Nullable UUID nodeId,
         @Nullable UUID clientNodeId) throws IgniteCheckedException {
         assert addr != null;
 
@@ -546,9 +546,13 @@ class ServerImpl extends TcpDiscoveryImpl {
                         return t;
                     }
                     catch (IOException | IgniteCheckedException e) {
-                        if (nodeId != null && !nodeAlive(nodeId))
-                            throw new IgniteNodeLeftException("Failed to ping node (node already left or leaving" +
-                                " the ring) [nodeId=" + nodeId + ", addr=" + addr +']', e);
+                        if (nodeId != null && !nodeAlive(nodeId)) {
+                            if (log.isDebugEnabled())
+                                log.debug("Failed to ping the node (has left or leaving topology): [nodeId=" + nodeId +
+                                    ']');
+
+                            return null;
+                        }
 
                         if (errs == null)
                             errs = new ArrayList<>();
@@ -1422,17 +1426,15 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             b.append("Leaving nodes: ").append(U.nl());
 
-            synchronized (mux) {
-                for (TcpDiscoveryNode node : leavingNodes)
-                    b.append("    ").append(node.id()).append(U.nl());
+            for (TcpDiscoveryNode node : leavingNodes)
+                b.append("    ").append(node.id()).append(U.nl());
 
-                b.append(U.nl());
+            b.append(U.nl());
 
-                b.append("Failed nodes: ").append(U.nl());
+            b.append("Failed nodes: ").append(U.nl());
 
-                for (TcpDiscoveryNode node : failedNodes)
-                    b.append("    ").append(node.id()).append(U.nl());
-            }
+            for (TcpDiscoveryNode node : failedNodes)
+                b.append("    ").append(node.id()).append(U.nl());
 
             b.append(U.nl());
 
