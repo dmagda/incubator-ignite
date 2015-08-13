@@ -25,6 +25,7 @@ import org.apache.ignite.internal.*;
 import org.apache.ignite.internal.cluster.*;
 import org.apache.ignite.internal.processors.affinity.*;
 import org.apache.ignite.internal.processors.cache.*;
+import org.apache.ignite.internal.processors.cache.distributed.dht.*;
 import org.apache.ignite.internal.processors.query.*;
 import org.apache.ignite.internal.util.future.*;
 import org.apache.ignite.internal.util.typedef.*;
@@ -554,13 +555,19 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         private volatile GridCacheQueryFutureAdapter<?, ?, R> fut;
 
         /** Backups. */
-        private final Queue<ClusterNode> nodes;
+        private volatile Queue<ClusterNode> nodes;
+
+        /** Backups that failed with {@link GridDhtUnreservedPartitionException}. */
+        private volatile Collection<ClusterNode> unreservedNodes;
 
         /** Bean. */
         private final GridCacheQueryBean bean;
 
         /** Query manager. */
         private final GridCacheQueryManager qryMgr;
+
+        /** Number of times to retry the query on the nodes failed with {@link GridDhtUnreservedPartitionException}. */
+        private volatile int unreservedNodesRetryCnt = 5;
 
         /**
          * @param nodes Backups.
@@ -598,7 +605,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
          */
         @SuppressWarnings("unchecked")
         private void init() {
-            ClusterNode node = nodes.poll();
+            final ClusterNode node = nodes.poll();
 
             GridCacheQueryFutureAdapter<?, ?, R> fut0 = (GridCacheQueryFutureAdapter<?, ?, R>)(node.isLocal() ?
                 qryMgr.queryLocal(bean) :
@@ -613,8 +620,29 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
                         onDone(e);
                     }
                     catch (IgniteCheckedException e) {
-                        if (F.isEmpty(nodes))
-                            onDone(e);
+                        if (e.getCause() != null && e.getCause().getClass() ==
+                            GridDhtUnreservedPartitionException.class) {
+                            // The race is impossible here because fallback queries are executed one by one.
+                            // Volatile guarantees visibility.
+                            if (unreservedNodes == null)
+                                unreservedNodes = new ArrayList<>(nodes.size() + 1);
+
+                            unreservedNodes.add(node);
+                        }
+
+                        if (F.isEmpty(nodes)) {
+                            if (unreservedNodes != null && --unreservedNodesRetryCnt > 0) {
+                                assert unreservedNodes.size() > 0;
+
+                                nodes = fallbacks(unreservedNodes);
+
+                                unreservedNodes = null;
+
+                                init();
+                            }
+                            else
+                                onDone(e);
+                        }
                         else
                             init();
                     }
