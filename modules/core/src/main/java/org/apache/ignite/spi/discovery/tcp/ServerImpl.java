@@ -5171,7 +5171,7 @@ class ServerImpl extends TcpDiscoveryImpl {
      */
     private static class GridPingFutureAdapter<R> extends GridFutureAdapter<R> {
         /** Socket. */
-        private Socket sock;
+        private volatile Socket sock;
 
         /**
          * Returns socket associated with this ping future.
