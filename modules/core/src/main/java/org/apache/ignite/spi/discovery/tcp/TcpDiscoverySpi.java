@@ -1184,7 +1184,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements DiscoverySpi, T
      * @throws IOException If failed.
      * @throws IgniteSpiOperationTimeoutException In case of timeout.
      */
-    Socket openSocket(Socket sock, InetSocketAddress remAddr, IgniteSpiOperationTimeoutHelper timeoutHelper)
+    protected Socket openSocket(Socket sock, InetSocketAddress remAddr, IgniteSpiOperationTimeoutHelper timeoutHelper)
         throws IOException, IgniteSpiOperationTimeoutException {
 
         assert remAddr != null;
@@ -1277,8 +1277,8 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements DiscoverySpi, T
      * @throws IOException If IO failed or write timed out.
      * @throws IgniteCheckedException If marshalling failed.
      */
-    protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg, long timeout)
-        throws IOException, IgniteCheckedException {
+    protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg, long timeout) throws IOException,
+        IgniteCheckedException {
         writeToSocket(sock, msg, new GridByteArrayOutputStream(8 * 1024), timeout); // 8K.
     }
 
