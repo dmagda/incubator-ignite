@@ -18,6 +18,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import org.apache.ignite.*;
+import org.apache.ignite.internal.processors.affinity.*;
 
 /**
  * Exception that is thrown when a partition reservation failed.
@@ -29,14 +30,19 @@ public class GridDhtUnreservedPartitionException extends IgniteCheckedException 
     /** Partition. */
     private final int part;
 
+    /** Topology version. */
+    private final AffinityTopologyVersion topVer;
+
     /**
      * @param part Partition.
+     * @param topVer Affinity topology version.
      * @param msg Message.
      */
-    public GridDhtUnreservedPartitionException(int part, String msg) {
+    public GridDhtUnreservedPartitionException(int part, AffinityTopologyVersion topVer, String msg) {
         super(msg);
 
         this.part = part;
+        this.topVer = topVer;
     }
 
     /**
@@ -44,6 +50,13 @@ public class GridDhtUnreservedPartitionException extends IgniteCheckedException 
      */
     public int partition() {
         return part;
+    }
+
+    /**
+     * @return Affinity topology version.
+     */
+    public AffinityTopologyVersion topologyVersion() {
+        return topVer;
     }
 
     /** {@inheritDoc} */

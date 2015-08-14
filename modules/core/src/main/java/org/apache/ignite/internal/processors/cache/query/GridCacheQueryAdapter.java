@@ -458,7 +458,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
             return (CacheQueryFuture<R>)(loc ? qryMgr.queryFieldsLocal(bean) :
                 qryMgr.queryFieldsDistributed(bean, nodes));
         else if (type == SCAN && part != null && nodes.size() > 1)
-            return new CacheQueryFallbackFuture<>(nodes, bean, qryMgr);
+            return new CacheQueryFallbackFuture<>(nodes, part, bean, qryMgr, cctx);
         else
             return (CacheQueryFuture<R>)(loc ? qryMgr.queryLocal(bean) : qryMgr.queryDistributed(bean, nodes));
     }
@@ -557,8 +557,11 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         /** Backups. */
         private volatile Queue<ClusterNode> nodes;
 
-        /** Backups that failed with {@link GridDhtUnreservedPartitionException}. */
-        private volatile Collection<ClusterNode> unreservedNodes;
+        /** Topology version of the last detected {@link GridDhtUnreservedPartitionException}. */
+        private volatile AffinityTopologyVersion unreservedTopVer;
+
+        /** Number of times to retry the query on the nodes failed with {@link GridDhtUnreservedPartitionException}. */
+        private volatile int unreservedNodesRetryCnt = 5;
 
         /** Bean. */
         private final GridCacheQueryBean bean;
@@ -566,19 +569,26 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         /** Query manager. */
         private final GridCacheQueryManager qryMgr;
 
-        /** Number of times to retry the query on the nodes failed with {@link GridDhtUnreservedPartitionException}. */
-        private volatile int unreservedNodesRetryCnt = 5;
+        /** Cache context. */
+        private final GridCacheContext cctx;
+
+        /** Partition. */
+        private final int part;
 
         /**
          * @param nodes Backups.
+         * @param part Partition.
          * @param bean Bean.
          * @param qryMgr Query manager.
+         * @param cctx Cache context.
          */
-        public CacheQueryFallbackFuture(Collection<ClusterNode> nodes, GridCacheQueryBean bean,
-            GridCacheQueryManager qryMgr) {
+        public CacheQueryFallbackFuture(Collection<ClusterNode> nodes, int part, GridCacheQueryBean bean,
+            GridCacheQueryManager qryMgr, GridCacheContext cctx) {
             this.nodes = fallbacks(nodes);
             this.bean = bean;
             this.qryMgr = qryMgr;
+            this.cctx = cctx;
+            this.part = part;
 
             init();
         }
@@ -622,23 +632,29 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
                     catch (IgniteCheckedException e) {
                         if (e.getCause() != null && e.getCause().getClass() ==
                             GridDhtUnreservedPartitionException.class) {
-                            // The race is impossible here because fallback queries are executed one by one.
-                            // Volatile guarantees visibility.
-                            if (unreservedNodes == null)
-                                unreservedNodes = new ArrayList<>(nodes.size() + 1);
+                            unreservedTopVer = ((GridDhtUnreservedPartitionException)e.getCause()).topologyVersion();
 
-                            unreservedNodes.add(node);
+                            assert unreservedTopVer != null;
                         }
 
                         if (F.isEmpty(nodes)) {
-                            if (unreservedNodes != null && --unreservedNodesRetryCnt > 0) {
-                                assert unreservedNodes.size() > 0;
+                            final AffinityTopologyVersion topVer = unreservedTopVer;
 
-                                nodes = fallbacks(unreservedNodes);
+                            if (topVer != null && --unreservedNodesRetryCnt > 0) {
 
-                                unreservedNodes = null;
+                                cctx.affinity().affinityReadyFuture(topVer).listen(
+                                    new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                                        @Override public void apply(
+                                            IgniteInternalFuture<AffinityTopologyVersion> future) {
 
-                                init();
+                                            nodes = fallbacks(cctx.topology().owners(part, topVer));
+
+                                            // Race is impossible here because query retries are executed one by one.
+                                            unreservedTopVer = null;
+
+                                            init();
+                                        }
+                                    });
                             }
                             else
                                 onDone(e);

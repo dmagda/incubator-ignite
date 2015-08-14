@@ -795,7 +795,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                         // double check for owning state
                         if (locPart == null || locPart.state() != OWNING || !locPart.reserve() ||
                             locPart.state() != OWNING)
-                            throw new GridDhtUnreservedPartitionException(part, "Partition can not be reserved");
+                            throw new GridDhtUnreservedPartitionException(part,
+                                cctx.affinity().affinityTopologyVersion(), "Partition can not be reserved");
 
                         iter = new Iterator<K>() {
                             private Iterator<KeyCacheObject> iter0 = locPart.keySet().iterator();
