@@ -27,7 +27,7 @@ public class LoadRunner {
     private Ignite ignite;
 
     /** */
-    private TapItemServiceImpl service;
+    private volatile TapItemServiceImpl service;
 
     /** */
     private final int poolSize = Runtime.getRuntime().availableProcessors() * 2;
@@ -44,52 +44,68 @@ public class LoadRunner {
     /** Conferences. */
     private ConcurrentMap<String, TapItem> conferences = new ConcurrentHashMap<>();
 
+    private final AtomicBoolean cacheLoading = new AtomicBoolean(false);
+
+
     /**
      * @param ignite Ignite.
      */
     public LoadRunner(Ignite ignite) {
         this.ignite = ignite;
 
-        service = new TapItemServiceImpl(ignite, ignite.<String, TapItem>cache(ITEMS_CACHE_NAME), ignite.<String, Set<String>>cache(CHILDREN_CACHE_NAME));
+        service = new TapItemServiceImpl(ignite, ignite.<String, TapItem>getOrCreateCache(ITEMS_CACHE_NAME),
+            ignite.<String, Set<String>>getOrCreateCache(CHILDREN_CACHE_NAME));
     }
 
     /**
      *
      */
     public void loadInitialData() throws Exception {
-        try (IgniteDataStreamer streamer = ignite.dataStreamer(ITEMS_CACHE_NAME)) {
-            for (int i = 0; i < CONFERENCES; i++) {
-                HashMap attrs = new HashMap();
+        if (!cacheLoading.compareAndSet(false, true))
+            return;
 
-                attrs.put("ATTR1", 0);
-                attrs.put("ATTR2", 0);
+        conferences.clear();
+        availableCallers.clear();
+        busyCallers.clear();
 
-                TapItem item = new TapItem("CONF-" + i, attrs);
+        try {
+            try (IgniteDataStreamer streamer = ignite.dataStreamer(ITEMS_CACHE_NAME)) {
+                for (int i = 0; i < CONFERENCES; i++) {
+                    HashMap attrs = new HashMap();
 
-                conferences.put(item.getId(), item);
+                    attrs.put("ATTR1", 0);
+                    attrs.put("ATTR2", 0);
 
-                streamer.addData(item.getId(), item);
+                    TapItem item = new TapItem("CONF-" + i, attrs);
+
+                    conferences.put(item.getId(), item);
+
+                    streamer.addData(item.getId(), item);
+                }
             }
-        }
 
-        ignite.log().warning("Done loading conferences.");
+            ignite.log().warning("Done loading conferences.");
 
-        try (IgniteDataStreamer streamer = ignite.dataStreamer(ITEMS_CACHE_NAME)) {
-            for (int i = 0; i < CALLERS; i++) {
-                HashMap attrs = new HashMap();
+            try (IgniteDataStreamer streamer = ignite.dataStreamer(ITEMS_CACHE_NAME)) {
+                for (int i = 0; i < CALLERS; i++) {
+                    HashMap attrs = new HashMap();
 
-                attrs.put("ATTR1", 0);
-                attrs.put("ATTR2", 0);
+                    attrs.put("ATTR1", 0);
+                    attrs.put("ATTR2", 0);
 
-                TapItem item = new TapItem("CALLER-" + i, attrs);
+                    TapItem item = new TapItem("CALLER-" + i, attrs);
 
-                availableCallers.offer(item);
+                    availableCallers.offer(item);
 
-                streamer.addData(item.getId(), item);
+                    streamer.addData(item.getId(), item);
+                }
             }
-        }
 
-        ignite.log().warning("Done loading callers.");
+            ignite.log().warning("Done loading callers.");
+        }
+        finally {
+            cacheLoading.set(false);
+        }
     }
 
     /**
@@ -400,6 +416,18 @@ public class LoadRunner {
         }
         catch (IllegalStateException ignore) {
             // Retry.
+
+            if (ignore.getMessage().contains("Cache has been closed or destroyed")) {
+                service = new TapItemServiceImpl(ignite, ignite.<String, TapItem>getOrCreateCache(ITEMS_CACHE_NAME),
+                    ignite.<String, Set<String>>getOrCreateCache(CHILDREN_CACHE_NAME));
+
+                try {
+                    loadInitialData();
+                }
+                catch (Exception e2) {
+                    e2.printStackTrace();
+                }
+            }
 
             ignore.printStackTrace();
         }
