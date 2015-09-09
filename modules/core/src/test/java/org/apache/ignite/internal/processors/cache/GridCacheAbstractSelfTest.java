@@ -71,6 +71,8 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
     /** VM ip finder for TCP discovery. */
     protected static TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
 
+    protected static volatile boolean skipStore;
+
     /**
      * @return Grids count to start.
      */
@@ -296,14 +298,23 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
             }
 
             @Override public Object load(Object key) {
+                if (skipStore)
+                    U.dumpStack("IGNORED SKIP STORE");
+
                 return map.get(key);
             }
 
             @Override public void write(javax.cache.Cache.Entry<? extends Object, ? extends Object> e) {
+                if (skipStore)
+                    U.dumpStack("IGNORED SKIP STORE");
+
                 map.put(e.getKey(), e.getValue());
             }
 
             @Override public void delete(Object key) {
+                if (skipStore)
+                    U.dumpStack("IGNORED SKIP STORE");
+
                 map.remove(key);
             }
         };

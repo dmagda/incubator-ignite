@@ -4529,9 +4529,15 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
             Integer val1 = -1;
 
-            cacheSkipStore.put(key, val1);
-            assertEquals(i, map.get(key));
-            assertEquals(val1, cacheSkipStore.get(key));
+            skipStore = true;
+            try {
+                cacheSkipStore.put(key, val1); //Failing 1
+                assertEquals(i, map.get(key));
+                assertEquals(val1, cacheSkipStore.get(key));
+            }
+            finally {
+                skipStore = false;
+            }
 
             Integer val2 = -2;
 
@@ -4541,9 +4547,15 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
         }
 
         for (String key : keys) {
-            cacheSkipStore.remove(key);
+            skipStore = true;
+            try {
+                assertTrue(cacheSkipStore.remove(key)); //Failing 2
 
-            assertNull(cacheSkipStore.get(key));
+                assertNull(cacheSkipStore.get(key));
+            }
+            finally {
+                skipStore = false;
+            }
             assertNotNull(cache.get(key));
             assertTrue(map.containsKey(key));
         }
@@ -4551,7 +4563,14 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
         for (String key : keys) {
             cache.remove(key);
 
-            assertNull(cacheSkipStore.get(key));
+            skipStore = true;
+            try {
+                assertNull(cacheSkipStore.get(key));
+            }
+            finally {
+                skipStore = false;
+            }
+
             assertNull(cache.get(key));
             assertFalse(map.containsKey(key));
 
