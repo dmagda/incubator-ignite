@@ -2441,8 +2441,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param req Near atomic update request.
      */
     private void processNearAtomicUpdateRequest(UUID nodeId, GridNearAtomicUpdateRequest req) {
-        if (log.isDebugEnabled())
-            log.debug("Processing near atomic update request [nodeId=" + nodeId + ", req=" + req + ']');
+//        if (log.isDebugEnabled())
+            log.warning("Processing near atomic update request [locNode=" + ctx.localNodeId() + ", nodeId=" + nodeId + ", req=" + req + ']');
 
         req.nodeId(ctx.localNodeId());
 
@@ -2455,8 +2455,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      */
     @SuppressWarnings("unchecked")
     private void processNearAtomicUpdateResponse(UUID nodeId, GridNearAtomicUpdateResponse res) {
-        if (log.isDebugEnabled())
-            log.debug("Processing near atomic update response [nodeId=" + nodeId + ", res=" + res + ']');
+//        if (log.isDebugEnabled())
+            log.warning("Processing near atomic update response [localNode=" + ctx.localNodeId() + ", nodeId=" + nodeId + ", res=" + res + ']');
 
         res.nodeId(ctx.localNodeId());
 
@@ -2655,6 +2655,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      */
     private void sendNearUpdateReply(UUID nodeId, GridNearAtomicUpdateResponse res) {
         try {
+            log.warning("Sending reply [locNode=" + ctx.localNodeId() + ", receiver=" + nodeId + ", res=" + res + ']');
             ctx.io().send(nodeId, res, ctx.ioPolicy());
         }
         catch (ClusterTopologyCheckedException ignored) {

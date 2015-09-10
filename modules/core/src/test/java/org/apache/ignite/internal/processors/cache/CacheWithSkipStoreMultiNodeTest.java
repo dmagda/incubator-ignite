@@ -536,4 +536,8 @@ public class CacheWithSkipStoreMultiNodeTest extends GridCacheAtomicNearEnabledM
     @Override public void testTransformException() throws Exception {
         return;
     }
+
+    @Override public void testWithSkipStoreTx() throws Exception {
+        return;
+    }
 }

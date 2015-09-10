@@ -4536,18 +4536,20 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
                 cacheSkipStore.put(key, val1); //Failing 1
                 assertEquals(i, map.get(key));
 
-                Object val = cacheSkipStore.get(key);
+//                Object val = cacheSkipStore.get(key);
+//
+//                if (val1.equals(val1)) {
+//                    log.warning("ERROR key=" + key + ", val=" + val);
+//
+//                    Thread.sleep(5000);
+//
+//                    return;
+//                }
 
-                if (val1.equals(val1)) {
-                    log.warning("ERROR key=" + key + ", val=" + val);
-
-                    Thread.sleep(5000);
-
-                    return;
-                }
+                log.warning("Getting from skip + " + key);
 
 //                if (!val1.equals(cacheSkipStore.get(key)))
-             //       assertEquals(val1, cacheSkipStore.get(key));
+                    assertEquals(val1, cacheSkipStore.get(key));
             }
             finally {
                 skipStore = false;
