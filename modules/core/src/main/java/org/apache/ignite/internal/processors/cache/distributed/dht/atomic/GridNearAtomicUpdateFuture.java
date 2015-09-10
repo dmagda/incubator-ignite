@@ -358,8 +358,14 @@ public class GridNearAtomicUpdateFuture extends GridFutureAdapter<Object>
      * @param res Update response.
      */
     private void updateNear(GridNearAtomicUpdateRequest req, GridNearAtomicUpdateResponse res) {
-        if (!nearEnabled || !req.hasPrimary())
+        if (!nearEnabled || !req.hasPrimary()) {
+            log.warning("Update near (IGNORED): [locNode=" + cctx.localNodeId() + ", req = " + req + ", resp " + res +
+                ", nearEnabled=" + nearEnabled + ", hasPrimary=" + req.hasPrimary() + ']');
+
             return;
+        }
+
+        log.warning("Update near: [locNode=" + cctx.localNodeId() + ", req = " + req + ", resp " + res + ']');
 
         GridNearAtomicCache near = (GridNearAtomicCache)cctx.dht().near();
 
@@ -458,6 +464,8 @@ public class GridNearAtomicUpdateFuture extends GridFutureAdapter<Object>
      */
     private void mapSingle(UUID nodeId, GridNearAtomicUpdateRequest req) {
         if (cctx.localNodeId().equals(nodeId)) {
+            log.warning("Map request (local): [nodeId=" + nodeId + ", req=" + req + ']');
+
             cache.updateAllAsyncInternal(nodeId, req,
                 new CI2<GridNearAtomicUpdateRequest, GridNearAtomicUpdateResponse>() {
                     @Override public void apply(GridNearAtomicUpdateRequest req, GridNearAtomicUpdateResponse res) {
@@ -504,6 +512,8 @@ public class GridNearAtomicUpdateFuture extends GridFutureAdapter<Object>
                     if (log.isDebugEnabled())
                         log.debug("Sending near atomic update request [nodeId=" + req.nodeId() + ", req=" + req + ']');
 
+                    log.warning("Sending request [locNode=" + locNodeId + ", req=" + req + ']');
+
                     cctx.io().send(req.nodeId(), req, cctx.ioPolicy());
                 }
                 catch (IgniteCheckedException e) {
@@ -513,6 +523,8 @@ public class GridNearAtomicUpdateFuture extends GridFutureAdapter<Object>
         }
 
         if (locUpdate != null) {
+            log.warning("Local update = " + locUpdate);
+
             cache.updateAllAsyncInternal(cctx.localNodeId(), locUpdate,
                 new CI2<GridNearAtomicUpdateRequest, GridNearAtomicUpdateResponse>() {
                     @Override public void apply(GridNearAtomicUpdateRequest req, GridNearAtomicUpdateResponse res) {
@@ -599,6 +611,9 @@ public class GridNearAtomicUpdateFuture extends GridFutureAdapter<Object>
          * @param nodeErr {@code True} if response was created on node failure.
          */
         void onResult(UUID nodeId, GridNearAtomicUpdateResponse res, boolean nodeErr) {
+            log.warning("Received update response [sender=" +nodeId + ", locNode=" + cctx.localNodeId() + ", res=" +
+                res +']');
+
             GridNearAtomicUpdateRequest req;
 
             AffinityTopologyVersion remapTopVer = null;

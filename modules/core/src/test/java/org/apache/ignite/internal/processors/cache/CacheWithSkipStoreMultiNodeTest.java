@@ -21,6 +21,7 @@ import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.fair.FairAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicNearEnabledMultiNodeFullApiSelfTest;
 
 /**
@@ -34,6 +35,10 @@ public class CacheWithSkipStoreMultiNodeTest extends GridCacheAtomicNearEnabledM
         cfg.setAffinity(new FairAffinityFunction());
 
         return cfg;
+    }
+
+    @Override protected int gridCount() {
+        return 4;
     }
 
     @Override public void testPutAllRemoveAll() throws Exception {
