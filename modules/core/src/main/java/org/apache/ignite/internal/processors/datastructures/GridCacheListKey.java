@@ -55,6 +55,25 @@ public class GridCacheListKey implements GridCacheInternalKey, Externalizable {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        GridCacheListKey listKey = (GridCacheListKey)o;
+
+        return !(name != null ? !name.equals(listKey.name) : listKey.name != null);
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return name != null ? name.hashCode() : 0;
+    }
+
+    /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         U.writeString(out, name);
     }
