@@ -34,6 +34,7 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteList;
 import org.apache.ignite.IgniteSet;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cluster.ClusterNode;
@@ -49,6 +50,8 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.datastructures.GridAtomicCacheQueueImpl;
+import org.apache.ignite.internal.processors.datastructures.GridCacheCollocatedListImpl;
+import org.apache.ignite.internal.processors.datastructures.GridCacheListKey;
 import org.apache.ignite.internal.processors.datastructures.GridCacheQueueHeader;
 import org.apache.ignite.internal.processors.datastructures.GridCacheQueueHeaderKey;
 import org.apache.ignite.internal.processors.datastructures.GridCacheQueueProxy;
@@ -541,6 +544,40 @@ public class CacheDataStructuresManager extends GridCacheManagerAdapter {
             blockSet(id);
 
             cctx.dataStructures().removeSetData(id, AffinityTopologyVersion.ZERO);
+        }
+    }
+
+    /**
+     * Gets a distributed list implementation depending on the collocation mode.
+     *
+     * @param name List name.
+     * @param colloc Collocation mode.
+     * @param create Create list if it doesn't exist in the cache.
+     * @param <T> Type of elements stored in the list.
+     * @return Distributed list implementation.
+     *
+     * @throws IgniteCheckedException If the operation fails.
+     */
+    @SuppressWarnings("unchecked")
+    @Nullable public <T> IgniteList<T> list(String name, boolean colloc, boolean create) throws IgniteCheckedException{
+        assert colloc; //TODO: support non collocated mode.
+
+        cctx.gate().enter();
+
+        try {
+            GridCacheListKey listKey = new GridCacheListKey(name);
+
+            if (create) {
+                //TODO: use list proxy!
+                cctx.cache().putIfAbsent(listKey, new ArrayList<T>(0));
+
+                return new GridCacheCollocatedListImpl<>(cctx, listKey);
+            }
+            else
+                return cctx.cache().containsKey(listKey) ? new GridCacheCollocatedListImpl<T>(cctx, listKey) : null;
+        }
+        finally {
+            cctx.gate().leave();
         }
     }
 

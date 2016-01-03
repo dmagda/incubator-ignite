@@ -30,6 +30,8 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteCountDownLatch;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteList;
 import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
@@ -378,6 +380,11 @@ public class IgniteMock implements Ignite {
     @Nullable @Override public <T> IgniteSet<T> set(String name,
         CollectionConfiguration cfg)
     {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T> IgniteList<T> list(String name, @Nullable CollectionConfiguration cfg) {
         return null;
     }
 

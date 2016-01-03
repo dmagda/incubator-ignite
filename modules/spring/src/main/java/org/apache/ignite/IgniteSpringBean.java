@@ -444,6 +444,13 @@ public class IgniteSpringBean implements Ignite, DisposableBean, InitializingBea
     }
 
     /** {@inheritDoc} */
+    @Override public <T> IgniteList<T> list(String name, @Nullable CollectionConfiguration cfg) {
+        assert g != null;
+
+        return g.list(name, cfg);
+    }
+
+    /** {@inheritDoc} */
     @Override public <K> Affinity<K> affinity(String cacheName) {
         return g.affinity(cacheName);
     }

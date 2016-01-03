@@ -43,6 +43,7 @@ import org.apache.ignite.IgniteAtomicStamped;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteList;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteQueue;
 import org.apache.ignite.IgniteSemaphore;
@@ -93,6 +94,7 @@ import static org.apache.ignite.internal.processors.datastructures.DataStructure
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.ATOMIC_SEQ;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.ATOMIC_STAMPED;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.COUNT_DOWN_LATCH;
+import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.LIST;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.QUEUE;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.SEMAPHORE;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DataStructureType.SET;
@@ -1546,6 +1548,49 @@ public final class DataStructuresProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Gets a list from the cache or creates its from scratch if it doesn't exist.
+     *
+     * @param name List name.
+     * @param cfg List configuration.
+     * @param <T> Type of elements stored in the list.
+     * @return Distributed list instance.
+     * @throws IgniteCheckedException If the operation fails.
+     */
+    @Nullable public <T> IgniteList<T> list(final String name, @Nullable final CollectionConfiguration cfg)
+        throws IgniteCheckedException {
+        A.notNull(name, "name");
+
+        awaitInitialization();
+
+        final CollectionInfo colInfo;
+
+        final boolean create;
+
+        if (cfg != null) {
+            if (!cfg.isCollocated())
+                throw new IllegalArgumentException("Collocated mode is only supported for IgniteList");
+
+            String cacheName = compatibleConfiguration(cfg);
+
+            colInfo = new CollectionInfo(cacheName, cfg.isCollocated());
+
+            create = true;
+        }
+        else {
+            colInfo = null;
+            create = false;
+        }
+
+        DataStructureInfo dsInfo = new DataStructureInfo(name, LIST, colInfo);
+
+        return getCollection(new CX1<GridCacheContext, IgniteList<T>>() {
+            @Override public IgniteList<T> applyx(GridCacheContext cctx) throws IgniteCheckedException {
+                return cctx.dataStructures().list(name, colInfo.collocated, create);
+            }
+        }, dsInfo, create);
+    }
+
+    /**
      * @param log Logger.
      * @param call Callable.
      * @return Callable result.
@@ -1679,6 +1724,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter {
 
         /** */
         SET(IgniteSet.class.getSimpleName()),
+
+        /** */
+        LIST(IgniteList.class.getSimpleName()),
 
         /** */
         SEMAPHORE(IgniteSemaphore.class.getSimpleName());
@@ -1902,7 +1950,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter {
             }
 
             if (create) {
-                if (type == QUEUE || type == SET) {
+                if (type == QUEUE || type == SET || type == LIST) {
                     CollectionInfo oldInfo = (CollectionInfo)info;
                     CollectionInfo newInfo = (CollectionInfo)dsInfo.info;
 

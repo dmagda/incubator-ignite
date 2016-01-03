@@ -63,6 +63,7 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteFileSystem;
+import org.apache.ignite.IgniteList;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.IgniteQueue;
@@ -2999,6 +3000,21 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         try {
             return ctx.dataStructures().set(name, cfg);
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+        finally {
+            unguard();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T> IgniteList<T> list(String name, @Nullable CollectionConfiguration cfg) {
+        guard();
+
+        try {
+            return ctx.dataStructures().list(name, cfg);
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

@@ -495,6 +495,18 @@ public interface Ignite extends AutoCloseable {
     public <T> IgniteSet<T> set(String name, @Nullable CollectionConfiguration cfg) throws IgniteException;
 
     /**
+     * Gets a distributed list. If the list with {@code name} doesn't exist and {@code cfg} is not {@code null} then
+     * the list is created first and a reference to it is returned right after that.
+     *
+     * @param name
+     * @param cfg
+     * @param <T>
+     * @return
+     * @throws IgniteException
+     */
+    public <T> IgniteList<T> list(String name, @Nullable CollectionConfiguration cfg) throws IgniteException;
+
+    /**
      * Gets an instance of deployed Ignite plugin.
      *
      * @param name Plugin name.
