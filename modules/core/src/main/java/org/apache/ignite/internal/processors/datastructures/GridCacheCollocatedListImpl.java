@@ -22,8 +22,14 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteList;
+import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -71,8 +77,16 @@ public class GridCacheCollocatedListImpl<T> implements IgniteList<T> {
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean add(T t) {
-        return false;
+        try {
+            cctx.cache().invoke(listKey, new AddElementProcessor<T>(), t);
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+
+        return true;
     }
 
     @Override public boolean remove(Object o) {
@@ -103,8 +117,14 @@ public class GridCacheCollocatedListImpl<T> implements IgniteList<T> {
 
     }
 
+    /** {@inheritDoc} */
     @Override public T get(int index) {
-        return null;
+        try {
+            return cctx.cache().invoke(listKey, new GetElementProcessor<T>(), index).get();
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
     @Override public T set(int index, T element) {
@@ -112,7 +132,12 @@ public class GridCacheCollocatedListImpl<T> implements IgniteList<T> {
     }
 
     @Override public void add(int index, T element) {
-
+        try {
+            cctx.cache().invoke(listKey, new AddElementProcessor<T>(), element, index);
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
     @Override public T remove(int index) {
@@ -144,6 +169,51 @@ public class GridCacheCollocatedListImpl<T> implements IgniteList<T> {
     }
 
     @Override public String name() {
-        return null;
+        return listKey.name();
+    }
+
+    /**
+     * Entry processor that adds new element to the list.
+     *
+     * @param <T> Type of elements stored in the list.
+     */
+    private static class AddElementProcessor<T> implements CacheEntryProcessor<GridCacheListKey, List<T>, Object> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** {@inheritDoc} */
+        @Override public Object process(MutableEntry<GridCacheListKey, List<T>> entry,
+            Object... arguments) throws EntryProcessorException {
+            assert arguments != null && arguments.length >= 1;
+
+            T val = (T)arguments[0];
+
+            List<T> list = entry.getValue();
+
+            if (arguments.length == 2)
+                list.add((int)arguments[1], val);
+            else
+                list.add(val);
+
+            // Triggers update of the list.
+            entry.setValue(list);
+
+            return null;
+        }
+    }
+
+    /**
+     * Entry processor that retrieves an element from a cache.
+     *
+     * @param <T> Type of elements stored in the list.
+     */
+    private static class GetElementProcessor<T> implements CacheEntryProcessor<GridCacheListKey, List<T>, T> {
+        /** {@inheritDoc} */
+        @Override public T process(MutableEntry<GridCacheListKey, List<T>> entry,
+            Object... arguments) throws EntryProcessorException {
+            assert arguments != null && arguments.length == 1;
+
+            return entry.getValue().get((int)arguments[0]);
+        }
     }
 }
