@@ -3059,6 +3059,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
     /**
      * {@link IgniteBiTuple} implementation that implements {@link GridCacheVersionAware} interface.
      *
+     * TODO: do we need to make the class Externalizable and set serialVersionUID?
+     *
      * @param <K> Entry key type.
      * @param <V> Entry value type.
      */
