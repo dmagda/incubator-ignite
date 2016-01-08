@@ -18,6 +18,7 @@
 package org.apache.ignite.internal.processors.cache.version;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
@@ -27,6 +28,7 @@ import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
 
 /**
@@ -136,9 +138,9 @@ public abstract class CacheVersionedEntryAbstractTest extends GridCacheAbstractS
     public void testVersionComparision() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
 
-        CacheEntry<String, Integer> ver1 = cache.invoke(100,
-            new EntryProcessor<Integer, String, CacheEntry<String, Integer>>() {
-                @Override public CacheEntry<String, Integer> process(MutableEntry<Integer, String> entry,
+        CacheEntry<Integer, String> ver1 = cache.invoke(100,
+            new EntryProcessor<Integer, String, CacheEntry<Integer, String>>() {
+                @Override public CacheEntry<Integer, String> process(MutableEntry<Integer, String> entry,
                     Object... arguments) throws EntryProcessorException {
                         return entry.unwrap(CacheEntry.class);
                     }
@@ -146,9 +148,9 @@ public abstract class CacheVersionedEntryAbstractTest extends GridCacheAbstractS
 
         cache.put(100, "new value 100");
 
-        CacheEntry<String, Integer> ver2 = cache.invoke(100,
-            new EntryProcessor<Integer, String, CacheEntry<String, Integer>>() {
-                @Override public CacheEntry<String, Integer> process(MutableEntry<Integer, String> entry,
+        CacheEntry<Integer, String> ver2 = cache.invoke(100,
+            new EntryProcessor<Integer, String, CacheEntry<Integer, String>>() {
+                @Override public CacheEntry<Integer, String> process(MutableEntry<Integer, String> entry,
                     Object... arguments) throws EntryProcessorException {
                         return entry.unwrap(CacheEntry.class);
                     }
@@ -158,6 +160,38 @@ public abstract class CacheVersionedEntryAbstractTest extends GridCacheAbstractS
         assert ver1.updateTime() <= ver2.updateTime();
     }
 
+    /**
+     * @throws Exception If failed.
+     */
+    public void testLocalScanQuery() throws Exception {
+        IgniteCache<Integer, String> cache = grid(0).cache(null);
+
+        ScanQuery<Integer, String> query = new ScanQuery<>();
+
+        query.setLocal(true);
+
+        List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
+
+        for (Cache.Entry<Integer, String> entry : res)
+            checkVersionedEntry(entry.unwrap(CacheEntry.class));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    public void testLocalScanQueryNoVersion() throws Exception {
+        IgniteCache<Integer, String> cache = grid(0).cache(null);
+
+        ScanQuery<Integer, String> query = new ScanQuery<>();
+
+        List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
+
+        for (Cache.Entry<Integer, String> entry : res) {
+            CacheEntry<Integer, String> verEntry = entry.unwrap(CacheEntry.class);
+
+            assertNull(verEntry.version());
+        }
+    }
     /**
      * @param entry Versioned entry.
      */
