@@ -27,6 +27,7 @@ import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheEntry;
+import org.apache.ignite.cache.CacheMemoryMode;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -46,14 +47,28 @@ public abstract class CacheVersionedEntryAbstractTest extends GridCacheAbstractS
         return 2;
     }
 
+    /**
+     * Memory mode.
+     *
+     * @return Cache memory mode.
+     */
+    protected CacheMemoryMode memoryMode() {
+        return CacheMemoryMode.ONHEAP_TIERED;
+    }
+
     /** {@inheritDoc} */
     @Override protected CacheConfiguration cacheConfiguration(String gridName) throws Exception {
         CacheConfiguration<Integer, String> cfg = super.cacheConfiguration(gridName);
 
-        cfg.setIndexedTypes(Integer.class, String.class);
+        cfg.setMemoryMode(memoryMode());
 
-        if (swapEnabled())
+        if (swapEnabled()) {
+            if (cfg.getMemoryMode() == CacheMemoryMode.ONHEAP_TIERED)
+                cfg.setOffHeapMaxMemory(-1);
+
             cfg.setEvictionPolicy(new LruEvictionPolicy(50));
+            cfg.setStatisticsEnabled(true);
+        }
 
         return cfg;
     }

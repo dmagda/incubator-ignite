@@ -25,11 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
  */
 public class CacheVersionedEntryPartitionedAtomicOffHeapValuesSelfTest extends CacheVersionedEntryPartitionedAtomicSelfTest {
     /** {@inheritDoc} */
-    @Override protected CacheConfiguration cacheConfiguration(String gridName) throws Exception {
-        CacheConfiguration cfg = super.cacheConfiguration(gridName);
-
-        cfg.setMemoryMode(CacheMemoryMode.OFFHEAP_VALUES);
-
-        return cfg;
+    @Override protected CacheMemoryMode memoryMode() {
+        return CacheMemoryMode.OFFHEAP_VALUES;
     }
 }

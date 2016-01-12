@@ -151,8 +151,9 @@ public abstract class CacheVersionedEntryBasicTest extends CacheVersionedEntryAb
     public void testLocalScanQuery() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
 
-        if (swapEnabled())
-            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap";
+//        if (swapEnabled())
+//            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap:" +
+//                cache.metrics().getSwapEntriesCount();
 
         ScanQuery<Integer, String> query = new ScanQuery<>();
 
@@ -170,32 +171,11 @@ public abstract class CacheVersionedEntryBasicTest extends CacheVersionedEntryAb
     public void testLocalScanQueryNoVersion() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
 
-        if (swapEnabled())
-            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap";
+//        if (swapEnabled())
+//            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap:" +
+//                cache.metrics().getSwapEntriesCount();
 
         ScanQuery<Integer, String> query = new ScanQuery<>();
-
-        List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
-
-        assert !res.isEmpty() : "Wrong entries size: " + res.size();
-
-        for (Cache.Entry<Integer, String> entry : res) {
-            CacheEntry<Integer, String> verEntry = entry.unwrap(CacheEntry.class);
-
-            assertNull(verEntry.version());
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testLocalSqlQuery() throws Exception {
-        IgniteCache<Integer, String> cache = grid(0).cache(null);
-
-        if (swapEnabled())
-            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap";
-
-        SqlQuery<Integer, String> query = new SqlQuery<Integer, String>(String.class, "");
 
         List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
 
