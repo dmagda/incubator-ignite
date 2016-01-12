@@ -17,30 +17,19 @@
 
 package org.apache.ignite.internal.processors.cache.version;
 
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheMemoryMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 
 /**
  *
  */
-public class CacheVersionedEntryLocalAtomicSwapDisabledSelfTest extends CacheVersionedEntryAbstractTest {
+public class CacheVersionedEntryPartitionedAtomicOffHeapValuesSelfTest extends CacheVersionedEntryPartitionedAtomicSelfTest {
     /** {@inheritDoc} */
-    @Override protected int gridCount() {
-        return 1;
-    }
+    @Override protected CacheConfiguration cacheConfiguration(String gridName) throws Exception {
+        CacheConfiguration cfg = super.cacheConfiguration(gridName);
 
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return CacheMode.LOCAL;
-    }
+        cfg.setMemoryMode(CacheMemoryMode.OFFHEAP_VALUES);
 
-    /** {@inheritDoc} */
-    @Override protected CacheAtomicityMode atomicityMode() {
-        return CacheAtomicityMode.ATOMIC;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected boolean swapEnabled() {
-        return false;
+        return cfg;
     }
 }

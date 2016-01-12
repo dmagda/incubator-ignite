@@ -1048,7 +1048,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         Iterator<Map.Entry<byte[], byte[]>> it = part == null ? cctx.swap().rawSwapIterator(true, backups) :
             cctx.swap().rawSwapIterator(part);
 
-        return scanIterator(it, filter, qry.keepBinary());
+        return scanIterator(it, filter, qry.keepBinary(), qry.includeEntryVersion());
     }
 
     /**
@@ -1067,7 +1067,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         else {
             Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawOffHeapIterator(qry.partition(), true, backups);
 
-            return scanIterator(it, filter, qry.keepBinary());
+            return scanIterator(it, filter, qry.keepBinary(), qry.includeEntryVersion());
         }
     }
 
@@ -1075,12 +1075,14 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * @param it Lazy swap or offheap iterator.
      * @param filter Scan filter.
      * @param keepBinary Keep binary flag.
+     * @param incVerEntry Include versioned entry flag.
      * @return Iterator.
      */
     private GridIteratorAdapter<IgniteBiTuple<K, V>> scanIterator(
         @Nullable final Iterator<Map.Entry<byte[], byte[]>> it,
         @Nullable final IgniteBiPredicate<K, V> filter,
-        final boolean keepBinary) {
+        final boolean keepBinary,
+        final boolean incVerEntry) {
         if (it == null)
             return new GridEmptyCloseableIterator<>();
 
@@ -1124,7 +1126,10 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             continue;
                     }
 
-                    next = new IgniteBiTuple<>(e.key(), e.value());
+                    if (incVerEntry)
+                        next = new VersionedMapEntry<>(e.key(), e.value(), e.version());
+                    else
+                        next = new IgniteBiTuple<>(e.key(), e.value());
 
                     break;
                 }
