@@ -151,10 +151,6 @@ public abstract class CacheVersionedEntryBasicTest extends CacheVersionedEntryAb
     public void testLocalScanQuery() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
 
-//        if (swapEnabled())
-//            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap:" +
-//                cache.metrics().getSwapEntriesCount();
-
         ScanQuery<Integer, String> query = new ScanQuery<>();
 
         query.setLocal(true);
@@ -170,10 +166,6 @@ public abstract class CacheVersionedEntryBasicTest extends CacheVersionedEntryAb
      */
     public void testLocalScanQueryNoVersion() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
-
-//        if (swapEnabled())
-//            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap:" +
-//                cache.metrics().getSwapEntriesCount();
 
         ScanQuery<Integer, String> query = new ScanQuery<>();
 

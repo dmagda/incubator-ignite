@@ -70,6 +70,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtLocalP
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnreservedPartitionException;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionAware;
+import org.apache.ignite.internal.processors.cache.version.VersionedMapEntry;
 import org.apache.ignite.internal.processors.datastructures.GridSetQueryPredicate;
 import org.apache.ignite.internal.processors.datastructures.SetItemKey;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
@@ -612,7 +613,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             taskName));
                     }
 
-                    iter = qryProc.queryText(space, qry.clause(), qry.queryClassName(), filter(qry));
+                    iter = qryProc.queryText(space, qry.clause(), qry.queryClassName(), filter(qry),
+                        qry.includeEntryVersion());
 
                     break;
 
@@ -3058,36 +3060,6 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
          */
         public int size() {
             return size;
-        }
-    }
-
-    /**
-     * {@link IgniteBiTuple} implementation that implements {@link GridCacheVersionAware} interface.
-     *
-     * TODO: do we need to make the class Externalizable and set serialVersionUID?
-     *
-     * @param <K> Entry key type.
-     * @param <V> Entry value type.
-     */
-    private static class VersionedMapEntry<K, V> extends IgniteBiTuple<K, V> implements GridCacheVersionAware {
-        /** Entry version. */
-        private final GridCacheVersion ver;
-
-        /**
-         * Constructor.
-         *
-         * @param val1 Entry key.
-         * @param val2 Entry value.
-         * @param ver Entry version.
-         */
-        public VersionedMapEntry(@Nullable K val1, @Nullable V val2, GridCacheVersion ver) {
-            super(val1, val2);
-            this.ver = ver;
-        }
-
-        /** {@inheritDoc} */
-        @Override public GridCacheVersion version() {
-            return ver;
         }
     }
 

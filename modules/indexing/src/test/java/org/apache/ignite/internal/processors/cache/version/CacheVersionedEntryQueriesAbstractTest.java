@@ -21,20 +21,30 @@ import java.util.List;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheEntry;
+import org.apache.ignite.cache.CacheMemoryMode;
+import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.cache.query.TextQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
 
 /**
  * Versioned entry abstract test.
  */
 public abstract class CacheVersionedEntryQueriesAbstractTest extends CacheVersionedEntryAbstractTest {
+    /** {@inheritDoc} */
+    @Override protected CacheConfiguration cacheConfiguration(String gridName) throws Exception {
+        CacheConfiguration<Integer, String> cfg = super.cacheConfiguration(gridName);
+
+        cfg.setIndexedTypes(Integer.class, String.class);
+
+        return cfg;
+    }
+
     /**
      * @throws Exception If failed.
      */
     public void testLocalSqlQuery() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
-
-        if (swapEnabled())
-            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap";
 
         SqlQuery<Integer, String> query = new SqlQuery<Integer, String>(String.class, "_key != -1");
 
@@ -54,12 +64,44 @@ public abstract class CacheVersionedEntryQueriesAbstractTest extends CacheVersio
     public void testLocalSqlQueryNoVersion() throws Exception {
         IgniteCache<Integer, String> cache = grid(0).cache(null);
 
-        if (swapEnabled())
-            assert cache.metrics().getSwapEntriesCount() > 0 : "No entries in swap";
-
         SqlQuery<Integer, String> query = new SqlQuery<Integer, String>(String.class, "_key != -1");
 
+        List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
+
+        assert !res.isEmpty() : "Wrong entries size: " + res.size();
+
+        for (Cache.Entry<Integer, String> entry : res) {
+            CacheEntry<Integer, String> verEntry = entry.unwrap(CacheEntry.class);
+
+            assertNull(verEntry.version());
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    public void testLocalTextQuery() throws Exception {
+        IgniteCache<Integer, String> cache = grid(0).cache(null);
+
+        TextQuery<Integer, String> query = new TextQuery<Integer, String>(String.class, "value*");
+
         query.setLocal(true);
+
+        List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
+
+        assert !res.isEmpty() : "Wrong entries size: " + res.size();
+
+        for (Cache.Entry<Integer, String> entry : res)
+            checkVersionedEntry(entry.unwrap(CacheEntry.class));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    public void testLocalTextQueryNoVersion() throws Exception {
+        IgniteCache<Integer, String> cache = grid(0).cache(null);
+
+        TextQuery<Integer, String> query = new TextQuery<Integer, String>(String.class, "value*");
 
         List<Cache.Entry<Integer, String>> res = cache.query(query).getAll();
 

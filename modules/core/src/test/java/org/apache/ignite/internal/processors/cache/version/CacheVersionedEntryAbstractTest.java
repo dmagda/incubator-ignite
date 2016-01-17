@@ -33,6 +33,7 @@ import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
 
 /**
@@ -45,6 +46,11 @@ public abstract class CacheVersionedEntryAbstractTest extends GridCacheAbstractS
     /** {@inheritDoc} */
     @Override protected int gridCount() {
         return 2;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected NearCacheConfiguration nearConfiguration() {
+        return null;
     }
 
     /**
@@ -66,7 +72,7 @@ public abstract class CacheVersionedEntryAbstractTest extends GridCacheAbstractS
             if (cfg.getMemoryMode() == CacheMemoryMode.ONHEAP_TIERED)
                 cfg.setOffHeapMaxMemory(-1);
 
-            cfg.setEvictionPolicy(new LruEvictionPolicy(50));
+            cfg.setEvictionPolicy(new LruEvictionPolicy(ENTRIES_NUM / 2));
             cfg.setStatisticsEnabled(true);
         }
 
